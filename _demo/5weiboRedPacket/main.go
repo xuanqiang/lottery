@@ -29,7 +29,11 @@ type task struct {
 var packageList *sync.Map = new(sync.Map)
 
 //单个消息队列
-var chTasks chan task = make(chan task)
+//var chTasks chan task = make(chan task)
+// 多个消息队列
+const taskNum = 16
+
+var chanTaskList []chan task = make([]chan task, taskNum)
 
 type lotteryController struct {
 	Ctx iris.Context
@@ -38,7 +42,11 @@ type lotteryController struct {
 func newApp() *iris.Application {
 	app := iris.New()
 	mvc.New(app.Party("/")).Handle(&lotteryController{})
-	go fetchPackageListMoney()
+	for i := 0; i < taskNum; i++ {
+		chanTaskList[i] = make(chan task)
+		go fetchPackageListMoney(chanTaskList[i])
+	}
+
 	return app
 }
 
@@ -155,6 +163,7 @@ func (c *lotteryController) GetGet() string {
 	callback := make(chan uint)
 	t := task{id: uint32(id), callback: callback}
 	// 发送任务
+	chTasks := chanTaskList[id%taskNum]
 	chTasks <- t
 	// 接受返回结果
 	money := <-callback
@@ -165,7 +174,7 @@ func (c *lotteryController) GetGet() string {
 	}
 }
 
-func fetchPackageListMoney() {
+func fetchPackageListMoney(chTasks chan task) {
 	for {
 		t := <-chTasks
 		id := t.id
