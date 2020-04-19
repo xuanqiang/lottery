@@ -28,8 +28,8 @@ type task struct {
 // 线程安全
 var packageList *sync.Map = new(sync.Map)
 
-//单个消息队列
-//var chTasks chan task = make(chan task)
+//单个消息队列 (用队列的方式解决map中list抽取红包后更新list的并发安全性)
+//var chTasks chan task = make(chan task) //定义一个队列
 // 多个消息队列
 const taskNum = 16
 
